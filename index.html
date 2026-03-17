@@ -87,7 +87,7 @@
     .day-tab.active { background: #2F7FB8; color: #fff; border-radius: 8px; }
     .check-item input[type=checkbox]:checked + label { text-decoration: line-through; color: #aaa; }
     .badge { display: inline-block; padding: .15rem .5rem; border-radius: 20px; font-size: .7rem; font-weight: 700; }
-    .page-section { display: none; }
+    .page-section { display: none; padding-top: 8px; }
     .page-section.active { display: block; }
     .expense-row:hover { background: #EBF5FF; }
     .guide-article p { line-height: 1.9; color: #444; }
@@ -103,6 +103,10 @@
     @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     .fade-in { animation: fadeIn .3s ease forwards; }
     .emoji-deco { position: absolute; opacity: .12; font-size: 3rem; pointer-events: none; user-select: none; }
+    .buy-item-card { transition: transform .18s, box-shadow .18s, opacity .18s; }
+    .buy-item-card.bought { transform: translateY(3px); box-shadow: 0 1px 8px rgba(47,127,184,0.08); opacity: .9; }
+    .buy-item-image { transition: filter .2s; cursor: pointer; }
+    .buy-item-image.bought { filter: grayscale(100%) brightness(0.88); }
   </style>
 </head>
 <body class="bg-oki-light text-gray-800">
@@ -442,6 +446,19 @@
     </div>
   </section>
 
+  <!-- BUY -->
+  <section id="sec-buy" class="page-section fade-in">
+    <h2 class="text-base font-bold text-oki-coral mb-3 flex items-center gap-2">
+      <i class="fa-solid fa-basket-shopping"></i> 購買清單
+      <span id="buy-progress" class="badge bg-oki-coral text-white ml-auto">0/0</span>
+    </h2>
+    <div class="card p-4 mb-4">
+      <p class="text-xs text-gray-500">中 / 日對照清單（中文 / 日本語）</p>
+      <p class="text-xs text-gray-400 mt-1">旅途中可直接對照品項與圖片快速確認 ✅</p>
+    </div>
+    <div id="buy-list" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+  </section>
+
   <!-- INFO -->
   <section id="sec-info" class="page-section fade-in">
     <h2 class="text-base font-bold text-oki-ocean mb-3 flex items-center gap-2">
@@ -543,6 +560,10 @@
     <button class="nav-btn flex flex-col items-center gap-0.5 px-3 py-2 text-gray-400" onclick="showSection('lists',this)">
       <i class="nav-icon fa-solid fa-check-double text-xl transition-transform"></i>
       <span class="text-[11px] font-medium">清單</span>
+    </button>
+    <button class="nav-btn flex flex-col items-center gap-0.5 px-3 py-2 text-gray-400" onclick="showSection('buy',this)">
+      <i class="nav-icon fa-solid fa-basket-shopping text-xl transition-transform"></i>
+      <span class="text-[11px] font-medium">購買</span>
     </button>
     <button class="nav-btn flex flex-col items-center gap-0.5 px-3 py-2 text-gray-400" onclick="showSection('info',this)">
       <i class="nav-icon fa-solid fa-circle-info text-xl transition-transform"></i>
@@ -1081,6 +1102,55 @@ function closePhotoModal(e) {
 }
 
 // 
+// BUY LIST
+// 
+var BUY_ITEMS = [
+  { file: 'CANMAKE 指緣油.jpg', zh: 'CANMAKE 指緣油', jp: 'キャンメイク ネイルオイル' },
+  { file: 'canmake 精緻捲翹睫毛膏.jpg', zh: 'CANMAKE 精緻捲翹睫毛膏', jp: 'キャンメイク カールマスカラ' },
+  { file: 'DUO卸妝膏.jpg', zh: 'DUO 卸妝膏', jp: 'DUO クレンジングバーム' },
+  { file: 'gyutto 髮膜.jpg', zh: 'gyutto 髮膜', jp: 'gyutto ヘアマスク' },
+  { file: 'lagom 早安洗面乳.jpg', zh: 'LAGOM 早安洗面乳', jp: 'LAGOM 朝用洗顔料' },
+  { file: 'unlabel lab 安博士 超快毛孔清零維他命vc美容液.jpg', zh: 'unlabel lab 安博士 VC 美容液', jp: 'unlabel LAB VC 美容液' },
+  { file: '京喚羽護髮.jpg', zh: '京喚羽護髮', jp: '京喚羽 トリートメント' },
+  { file: '光腿神器絲襪.jpg', zh: '光腿神器絲襪', jp: '裏起毛ストッキング' },
+  { file: '扭蛋玩具收藏擺設台.jpg', zh: '扭蛋玩具收藏擺設台', jp: 'ガチャディスプレイ台' },
+  { file: '牛乳石鹼卸妝乳.jpg', zh: '牛乳石鹼卸妝乳', jp: '牛乳石鹸 クレンジングミルク' }
+];
+
+function renderBuyList() {
+  var container = document.getElementById('buy-list');
+  if (!container) return;
+  var checkedCount = 0;
+  container.innerHTML = BUY_ITEMS.map(function(item, i) {
+    var key = 'buy_' + i;
+    var isChecked = checkStates[key] || false;
+    if (isChecked) checkedCount++;
+    var src = encodeURI('buy/' + item.file);
+    return '<div class="card p-3 buy-item-card ' + (isChecked ? 'bought' : '') + '">' +
+      '<div class="flex items-center justify-between mb-2">' +
+      '<label for="' + key + '" class="text-xs font-medium text-gray-500">已購買</label>' +
+      '<input id="' + key + '" type="checkbox" class="w-4 h-4 accent-oki-coral cursor-pointer" ' + (isChecked ? 'checked' : '') + ' onchange="toggleBuyCheck(' + i + ', this.checked)" />' +
+      '</div>' +
+      '<img src="' + src + '" alt="' + item.zh + '" class="w-full max-h-56 object-contain rounded-lg border border-gray-100 bg-white buy-item-image ' + (isChecked ? 'bought' : '') + '" loading="lazy" onclick="toggleBuyCheck(' + i + ')" />' +
+      '<div class="mt-2 space-y-0.5">' +
+      '<p class="text-sm font-bold ' + (isChecked ? 'text-gray-400 line-through' : 'text-gray-800') + '">中文：' + item.zh + '</p>' +
+      '<p class="text-xs text-oki-ocean">日本語：' + item.jp + '</p>' +
+      '</div>' +
+      '</div>';
+  }).join('');
+  var progressEl = document.getElementById('buy-progress');
+  if (progressEl) progressEl.textContent = checkedCount + '/' + BUY_ITEMS.length;
+}
+
+function toggleBuyCheck(index, forceState) {
+  var key = 'buy_' + index;
+  if (typeof forceState === 'boolean') checkStates[key] = forceState;
+  else checkStates[key] = !checkStates[key];
+  saveAll();
+  renderBuyList();
+}
+
+// 
 // IMAGE COMPRESSION
 // 
 function compressImage(file, maxSize, quality) {
@@ -1289,6 +1359,7 @@ function init() {
   document.getElementById('exchange-rate').value = ratePerHundred;
   renderChecklist(CARRY_ITEMS, 'carry-list',  'carry', 'carry-progress');
   renderChecklist(CHECK_ITEMS, 'check-list',  'check', 'check-progress');
+  renderBuyList();
   if (memoText) { document.getElementById('memo-text').value = memoText; renderMemoPreview(); }
   renderExpenses();
   updateDashboard();
