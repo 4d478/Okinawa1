@@ -105,7 +105,7 @@
     .emoji-deco { position: absolute; opacity: .12; font-size: 3rem; pointer-events: none; user-select: none; }
     .buy-item-card { transition: transform .18s, box-shadow .18s, opacity .18s; }
     .buy-item-card.bought { transform: translateY(3px); box-shadow: 0 1px 8px rgba(47,127,184,0.08); opacity: .9; }
-    .buy-item-image { transition: filter .2s; cursor: pointer; }
+    .buy-item-image { transition: filter .2s; cursor: pointer; -webkit-tap-highlight-color: transparent; }
     .buy-item-image.bought { filter: grayscale(100%) brightness(0.88); }
   </style>
 </head>
@@ -1113,6 +1113,7 @@ var BUY_ITEMS = [
   { file: 'unlabel lab 安博士 超快毛孔清零維他命vc美容液.jpg', zh: 'unlabel lab 安博士 VC 美容液', jp: 'unlabel LAB VC 美容液' },
   { file: '京喚羽護髮.jpg', zh: '京喚羽護髮', jp: '京喚羽 トリートメント' },
   { file: '光腿神器絲襪.jpg', zh: '光腿神器絲襪', jp: '裏起毛ストッキング' },
+  { file: '沖繩 辣粉.jpg', zh: '沖繩辣粉', jp: '沖縄唐辛子パウダー' },
   { file: '扭蛋玩具收藏擺設台.jpg', zh: '扭蛋玩具收藏擺設台', jp: 'ガチャディスプレイ台' },
   { file: '牛乳石鹼卸妝乳.jpg', zh: '牛乳石鹼卸妝乳', jp: '牛乳石鹸 クレンジングミルク' }
 ];
@@ -1120,24 +1121,29 @@ var BUY_ITEMS = [
 function renderBuyList() {
   var container = document.getElementById('buy-list');
   if (!container) return;
-  var checkedCount = 0;
   container.innerHTML = BUY_ITEMS.map(function(item, i) {
     var key = 'buy_' + i;
     var isChecked = checkStates[key] || false;
-    if (isChecked) checkedCount++;
     var src = encodeURI('buy/' + item.file);
-    return '<div class="card p-3 buy-item-card ' + (isChecked ? 'bought' : '') + '">' +
+    return '<div id="buy-card-' + i + '" class="card p-3 buy-item-card ' + (isChecked ? 'bought' : '') + '">' +
       '<div class="flex items-center justify-between mb-2">' +
       '<label for="' + key + '" class="text-xs font-medium text-gray-500">已購買</label>' +
       '<input id="' + key + '" type="checkbox" class="w-4 h-4 accent-oki-coral cursor-pointer" ' + (isChecked ? 'checked' : '') + ' onchange="toggleBuyCheck(' + i + ', this.checked)" />' +
       '</div>' +
-      '<img src="' + src + '" alt="' + item.zh + '" class="w-full max-h-56 object-contain rounded-lg border border-gray-100 bg-white buy-item-image ' + (isChecked ? 'bought' : '') + '" loading="lazy" onclick="toggleBuyCheck(' + i + ')" />' +
+      '<img id="buy-img-' + i + '" src="' + src + '" alt="' + item.zh + '" class="w-full max-h-56 object-contain rounded-lg border border-gray-100 bg-white buy-item-image ' + (isChecked ? 'bought' : '') + '" loading="lazy" onclick="toggleBuyCheck(' + i + ')" />' +
       '<div class="mt-2 space-y-0.5">' +
-      '<p class="text-sm font-bold ' + (isChecked ? 'text-gray-400 line-through' : 'text-gray-800') + '">中文：' + item.zh + '</p>' +
+      '<p id="buy-zh-' + i + '" class="text-sm font-bold ' + (isChecked ? 'text-gray-400 line-through' : 'text-gray-800') + '">中文：' + item.zh + '</p>' +
       '<p class="text-xs text-oki-ocean">日本語：' + item.jp + '</p>' +
       '</div>' +
       '</div>';
   }).join('');
+  updateBuyProgress();
+}
+
+function updateBuyProgress() {
+  var checkedCount = BUY_ITEMS.reduce(function(sum, item, i) {
+    return sum + (checkStates['buy_' + i] ? 1 : 0);
+  }, 0);
   var progressEl = document.getElementById('buy-progress');
   if (progressEl) progressEl.textContent = checkedCount + '/' + BUY_ITEMS.length;
 }
@@ -1146,8 +1152,26 @@ function toggleBuyCheck(index, forceState) {
   var key = 'buy_' + index;
   if (typeof forceState === 'boolean') checkStates[key] = forceState;
   else checkStates[key] = !checkStates[key];
+  var isChecked = !!checkStates[key];
+
+  var checkbox = document.getElementById(key);
+  if (checkbox) checkbox.checked = isChecked;
+
+  var card = document.getElementById('buy-card-' + index);
+  if (card) card.classList.toggle('bought', isChecked);
+
+  var img = document.getElementById('buy-img-' + index);
+  if (img) img.classList.toggle('bought', isChecked);
+
+  var zh = document.getElementById('buy-zh-' + index);
+  if (zh) {
+    zh.classList.toggle('text-gray-400', isChecked);
+    zh.classList.toggle('line-through', isChecked);
+    zh.classList.toggle('text-gray-800', !isChecked);
+  }
+
   saveAll();
-  renderBuyList();
+  updateBuyProgress();
 }
 
 // 
